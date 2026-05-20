@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Crypto Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0a0f;
+      --bg2: #111118;
+      --bg3: #1a1a24;
+      --bg4: #22222e;
+      --border: rgba(255,255,255,0.07);
+      --border2: rgba(255,255,255,0.12);
+      --text: #f0f0f8;
+      --text2: #8888aa;
+      --text3: #555570;
+      --green: #00e09a;
+      --red: #ff4d6a;
+      --accent: #7c6fff;
+      --font-mono: 'Space Mono', monospace;
+      --font-body: 'DM Sans', sans-serif;
+      --radius: 10px;
+      --radius-lg: 16px;
+    }
+
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font-body); font-size: 14px; }
+
+    body {
+      min-height: 100vh;
+      background: var(--bg);
+      background-image: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(124,111,255,0.08), transparent);
+    }
+
+    .app { max-width: 900px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+
+    /* HEADER */
+    header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2rem; }
+    .logo { font-family: var(--font-mono); font-size: 18px; font-weight: 700; letter-spacing: -0.5px; }
+    .logo span { color: var(--accent); }
+    .live-badge { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text2); }
+    .live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+
+    /* TABS */
+    .tabs { display: flex; gap: 2px; background: var(--bg2); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 3px; margin-bottom: 1.5rem; width: fit-content; }
+    .tab { padding: 7px 18px; border-radius: 7px; border: none; background: transparent; color: var(--text2); font-family: var(--font-body); font-size: 13px; cursor: pointer; transition: all 0.15s; }
+    .tab.active { background: var(--bg4); color: var(--text); font-weight: 500; }
+
+    /* CARDS GRID */
+    .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 1.25rem; }
+    .stat-card { background: var(--bg2); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
+    .stat-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
+    .stat-value { font-family: var(--font-mono); font-size: 18px; font-weight: 700; }
+
+    /* COIN SELECTOR */
+    .coin-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; flex-wrap: wrap; gap: 8px; }
+    .coin-pills { display: flex; gap: 5px; flex-wrap: wrap; }
+    .coin-pill { padding: 4px 11px; border-radius: 20px; border: 0.5px solid var(--border2); background: transparent; color: var(--text2); font-size: 12px; font-family: var(--font-body); cursor: pointer; transition: all 0.15s; }
+    .coin-pill.active { background: var(--bg4); color: var(--text); border-color: var(--accent); }
+    .range-pills { display: flex; gap: 2px; }
+    .range-pill { padding: 4px 10px; border-radius: 6px; border: none; background: transparent; color: var(--text3); font-size: 12px; font-family: var(--font-body); cursor: pointer; transition: all 0.12s; }
+    .range-pill.active { background: var(--bg4); color: var(--text); }
+
+    /* CHART */
+    .chart-wrap { position: relative; width: 100%; height: 220px; margin-bottom: 1.25rem; }
+
+    /* ALL COINS GRID */
+    .coins-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; }
+    .coin-card { background: var(--bg2); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 10px 12px; cursor: pointer; transition: border-color 0.15s; }
+    .coin-card:hover { border-color: var(--border2); }
+    .coin-card.active { border-color: var(--accent); }
+    .coin-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+    .coin-sym { font-size: 12px; font-weight: 600; font-family: var(--font-mono); }
+    .coin-chg { font-size: 11px; }
+    .coin-price { font-size: 13px; font-family: var(--font-mono); font-weight: 700; }
+
+    /* PORTFOLIO */
+    .port-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem; }
+    .port-chart-wrap { position: relative; height: 200px; }
+    .holdings-wrap { display: flex; flex-direction: column; justify-content: center; gap: 6px; }
+    .holding-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: var(--bg2); border: 0.5px solid var(--border); border-radius: var(--radius); }
+    .holding-left { display: flex; align-items: center; gap: 10px; }
+    .holding-icon { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; font-family: var(--font-mono); }
+    .holding-name { font-size: 13px; font-weight: 500; }
+    .holding-sub { font-size: 11px; color: var(--text3); margin-top: 1px; }
+    .holding-right { text-align: right; }
+    .holding-val { font-size: 13px; font-family: var(--font-mono); font-weight: 700; }
+    .holding-pnl { font-size: 11px; margin-top: 1px; }
+    .del-btn { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 18px; padding: 0 4px; line-height: 1; margin-left: 8px; }
+    .del-btn:hover { color: var(--red); }
+
+    /* ADD FORM */
+    .add-form { background: var(--bg2); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1rem 1.25rem; margin-bottom: 1.25rem; }
+    .form-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; }
+    .form-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .form-input { padding: 8px 12px; border-radius: var(--radius); border: 0.5px solid var(--border2); background: var(--bg3); color: var(--text); font-family: var(--font-body); font-size: 13px; outline: none; }
+    .form-input:focus { border-color: var(--accent); }
+    select.form-input { cursor: pointer; }
+    .form-btn { padding: 8px 16px; border-radius: var(--radius); border: 0.5px solid var(--border2); background: transparent; color: var(--text); font-family: var(--font-body); font-size: 13px; cursor: pointer; transition: background 0.15s; }
+    .form-btn:hover { background: var(--bg4); }
+
+    /* ALERTS */
+    .alert-row { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--bg2); border: 0.5px solid var(--border); border-radius: var(--radius); margin-bottom: 6px; }
+    .alert-icon { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; font-family: var(--font-mono); flex-shrink: 0; }
+    .alert-info { flex: 1; }
+    .alert-title { font-size: 13px; font-weight: 500; }
+    .alert-sub { font-size: 11px; color: var(--text3); margin-top: 1px; }
+    .badge { font-size: 10px; padding: 3px 8px; border-radius: 20px; font-weight: 500; }
+    .badge-watching { background: rgba(124,111,255,0.15); color: var(--accent); }
+    .badge-triggered { background: rgba(0,224,154,0.15); color: var(--green); }
+    .section-title { font-size: 12px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; margin-top: 1.25rem; }
+
+    /* EMPTY */
+    .empty { color: var(--text3); font-size: 13px; padding: 0.75rem 0; }
+
+    /* FOOTER */
+    #last-updated { text-align: right; font-size: 11px; color: var(--text3); margin-top: 10px; }
+
+    @media (max-width: 600px) {
+      .stats-grid { grid-template-columns: 1fr 1fr; }
+      .port-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="logo">crypto<span>.</span>dashboard</div>
+    <div class="live-badge"><div class="live-dot"></div><span id="last-updated">loading...</span></div>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('chart',this)">prices</button>
+    <button class="tab" onclick="switchTab('portfolio',this)">portfolio</button>
+    <button class="tab" onclick="switchTab('alerts',this)">alerts</button>
+  </div>
+
+  <!-- PRICES TAB -->
+  <div id="tab-chart">
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-label">price</div><div class="stat-value" id="stat-price">—</div></div>
+      <div class="stat-card"><div class="stat-label">24h change</div><div class="stat-value" id="stat-change">—</div></div>
+      <div class="stat-card"><div class="stat-label">market cap</div><div class="stat-value" id="stat-mcap">—</div></div>
+    </div>
+    <div class="coin-row">
+      <div class="coin-pills" id="coin-tabs"></div>
+      <div class="range-pills" id="range-tabs"></div>
+    </div>
+    <div class="chart-wrap"><canvas id="priceChart" role="img" aria-label="Crypto price chart"></canvas></div>
+    <div class="coins-grid" id="all-coins"></div>
+  </div>
+
+  <!-- PORTFOLIO TAB -->
+  <div id="tab-portfolio" style="display:none;">
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-label">total value</div><div class="stat-value" id="port-total">$0</div></div>
+      <div class="stat-card"><div class="stat-label">total P&L</div><div class="stat-value" id="port-pnl">$0</div></div>
+      <div class="stat-card"><div class="stat-label">best performer</div><div class="stat-value" id="port-best">—</div></div>
+    </div>
+    <div class="port-grid">
+      <div class="port-chart-wrap"><canvas id="portChart" role="img" aria-label="Portfolio allocation"></canvas></div>
+      <div class="holdings-wrap" id="holdings-list"></div>
+    </div>
+    <div class="add-form">
+      <div class="form-label">add holding</div>
+      <div class="form-row">
+        <select id="p-coin" class="form-input" style="width:90px;"></select>
+        <input id="p-amount" class="form-input" type="number" placeholder="amount" style="width:110px;" />
+        <input id="p-buy" class="form-input" type="number" placeholder="buy price $" style="width:120px;" />
+        <button class="form-btn" onclick="addHolding()"><i class="ti ti-plus"></i> add</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ALERTS TAB -->
+  <div id="tab-alerts" style="display:none;">
+    <div class="add-form">
+      <div class="form-label">new alert</div>
+      <div class="form-row">
+        <select id="a-coin" class="form-input" style="width:90px;"></select>
+        <select id="a-type" class="form-input" style="width:100px;"><option value="above">above</option><option value="below">below</option></select>
+        <input id="a-price" class="form-input" type="number" placeholder="target $" style="width:120px;" />
+        <button class="form-btn" onclick="addAlert()"><i class="ti ti-bell"></i> set alert</button>
+      </div>
+    </div>
+    <div class="section-title">active alerts</div>
+    <div id="alerts-list"></div>
+    <div id="triggered-section" style="display:none;">
+      <div class="section-title">triggered</div>
+      <div id="triggered-list"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const COINS=[
+  {id:'bitcoin',sym:'BTC',color:'#F7931A'},{id:'ethereum',sym:'ETH',color:'#627EEA'},
+  {id:'solana',sym:'SOL',color:'#9945FF'},{id:'binancecoin',sym:'BNB',color:'#F0B90B'},
+  {id:'ripple',sym:'XRP',color:'#346AA9'},{id:'cardano',sym:'ADA',color:'#0033AD'},
+  {id:'avalanche-2',sym:'AVAX',color:'#E84142'},{id:'dogecoin',sym:'DOGE',color:'#C2A633'},
+  {id:'polkadot',sym:'DOT',color:'#E6007A'},{id:'chainlink',sym:'LINK',color:'#2A5ADA'},
+  {id:'toncoin',sym:'TON',color:'#0098EA'},{id:'shiba-inu',sym:'SHIB',color:'#FFA409'},
+];
+const RANGES=[{label:'1D',days:1},{label:'7D',days:7},{label:'1M',days:30},{label:'1Y',days:365}];
+
+let selCoin=COINS[0],selRange=RANGES[0];
+let marketData={},pricesData={},portfolio=[],alerts=[],triggered=[];
+let priceChart=null,portChart=null;
+
+function fmt(n){
+  if(n===null||n===undefined||isNaN(n))return'—';
+  if(Math.abs(n)>=1e12)return'$'+(n/1e12).toFixed(2)+'T';
+  if(Math.abs(n)>=1e9)return'$'+(n/1e9).toFixed(2)+'B';
+  if(Math.abs(n)>=1e6)return'$'+(n/1e6).toFixed(2)+'M';
+  if(Math.abs(n)>=1000)return'$'+n.toLocaleString(undefined,{maximumFractionDigits:2});
+  if(Math.abs(n)>=1)return'$'+n.toFixed(2);
+  return'$'+n.toFixed(6);
+}
+
+function switchTab(name,btn){
+  ['chart','portfolio','alerts'].forEach(t=>document.getElementById('tab-'+t).style.display=t===name?'block':'none');
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  if(name==='portfolio')renderPortfolio();
+  if(name==='alerts')renderAlerts();
+}
+
+function buildCoinSelects(){
+  ['p-coin','a-coin'].forEach(id=>{
+    const s=document.getElementById(id);
+    s.innerHTML='';
+    COINS.forEach(c=>{const o=document.createElement('option');o.value=c.id;o.textContent=c.sym;s.appendChild(o);});
+  });
+}
+
+function buildTabs(){
+  const ct=document.getElementById('coin-tabs');ct.innerHTML='';
+  COINS.forEach(c=>{
+    const b=document.createElement('button');
+    b.className='coin-pill'+(c.id===selCoin.id?' active':'');
+    b.textContent=c.sym;b.style.color=c.id===selCoin.id?c.color:'';
+    b.onclick=()=>{selCoin=c;buildTabs();renderStats();renderPriceChart();};
+    ct.appendChild(b);
+  });
+  const rt=document.getElementById('range-tabs');rt.innerHTML='';
+  RANGES.forEach(r=>{
+    const b=document.createElement('button');
+    b.className='range-pill'+(r.label===selRange.label?' active':'');
+    b.textContent=r.label;
+    b.onclick=()=>{selRange=r;buildTabs();fetchHistory();};
+    rt.appendChild(b);
+  });
+}
+
+function renderStats(){
+  const d=marketData[selCoin.id];if(!d)return;
+  document.getElementById('stat-price').textContent=fmt(d.current_price);
+  const chg=d.price_change_percentage_24h||0;
+  const el=document.getElementById('stat-change');
+  el.textContent=(chg>=0?'+':'')+chg.toFixed(2)+'%';
+  el.style.color=chg>=0?'var(--green)':'var(--red)';
+  document.getElementById('stat-mcap').textContent=fmt(d.market_cap);
+}
+
+function renderAllCoins(){
+  const c=document.getElementById('all-coins');c.innerHTML='';
+  COINS.forEach(coin=>{
+    const d=marketData[coin.id];if(!d)return;
+    const chg=d.price_change_percentage_24h||0;
+    const div=document.createElement('div');
+    div.className='coin-card'+(coin.id===selCoin.id?' active':'');
+    div.innerHTML=`<div class="coin-card-header"><span class="coin-sym" style="color:${coin.color}">${coin.sym}</span><span class="coin-chg" style="color:${chg>=0?'var(--green)':'var(--red)'}">${chg>=0?'+':''}${chg.toFixed(2)}%</span></div><div class="coin-price">${fmt(d.current_price)}</div>`;
+    div.onclick=()=>{selCoin=coin;buildTabs();renderStats();renderPriceChart();};
+    c.appendChild(div);
+  });
+}
+
+function renderPriceChart(){
+  const hist=pricesData[selCoin.id+'_'+selRange.label];
+  if(!hist||!hist.length)return;
+  const labels=hist.map(p=>{
+    const d=new Date(p[0]);
+    if(selRange.days===1)return d.getHours()+':00';
+    if(selRange.days<=7)return d.toLocaleDateString(undefined,{weekday:'short'});
+    if(selRange.days<=30)return d.toLocaleDateString(undefined,{month:'short',day:'numeric'});
+    return d.toLocaleDateString(undefined,{month:'short',year:'2-digit'});
+  });
+  const prices=hist.map(p=>p[1]);
+  const isUp=prices[prices.length-1]>=prices[0];
+  const lc=isUp?'#00e09a':'#ff4d6a';
+  if(priceChart)priceChart.destroy();
+  priceChart=new Chart(document.getElementById('priceChart'),{
+    type:'line',
+    data:{labels,datasets:[{data:prices,borderColor:lc,borderWidth:1.5,pointRadius:0,tension:0.3,fill:true,backgroundColor:(ctx)=>{const g=ctx.chart.ctx.createLinearGradient(0,0,0,220);g.addColorStop(0,lc+'28');g.addColorStop(1,lc+'00');return g;}}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>fmt(ctx.raw)},backgroundColor:'#1a1a24',titleColor:'#8888aa',bodyColor:'#f0f0f8',borderColor:'rgba(255,255,255,0.08)',borderWidth:1}},scales:{x:{ticks:{color:'#555570',font:{size:10},maxTicksLimit:7,autoSkip:true},grid:{display:false},border:{display:false}},y:{ticks:{color:'#555570',font:{size:10,family:'Space Mono'},callback:v=>fmt(v)},grid:{color:'rgba(255,255,255,0.05)'},border:{display:false}}}}
+  });
+}
+
+function renderPortfolio(){
+  const list=document.getElementById('holdings-list');list.innerHTML='';
+  if(!portfolio.length){
+    list.innerHTML='<div class="empty">no holdings yet</div>';
+    document.getElementById('port-total').textContent='$0';
+    document.getElementById('port-pnl').textContent='$0';
+    document.getElementById('port-best').textContent='—';
+    if(portChart)portChart.destroy();return;
+  }
+  let total=0,totalCost=0,bestPct=-Infinity,bestSym='—';
+  const chartLabels=[],chartData=[],chartColors=[];
+  portfolio.forEach((h,i)=>{
+    const d=marketData[h.coinId];const coin=COINS.find(c=>c.id===h.coinId);if(!d||!coin)return;
+    const val=d.current_price*h.amount;const cost=h.buyPrice*h.amount;
+    const pnl=val-cost;const pct=((val-cost)/cost)*100;
+    total+=val;totalCost+=cost;
+    if(pct>bestPct){bestPct=pct;bestSym=coin.sym;}
+    chartLabels.push(coin.sym);chartData.push(+val.toFixed(2));chartColors.push(coin.color);
+    const row=document.createElement('div');row.className='holding-row';
+    row.innerHTML=`<div class="holding-left"><div class="holding-icon" style="background:${coin.color}22;color:${coin.color}">${coin.sym.slice(0,3)}</div><div><div class="holding-name">${coin.sym} × ${h.amount}</div><div class="holding-sub">avg ${fmt(h.buyPrice)}</div></div></div><div class="holding-right"><div class="holding-val">${fmt(val)}</div><div class="holding-pnl" style="color:${pnl>=0?'var(--green)':'var(--red)'}">${pnl>=0?'+':''}${fmt(pnl)} (${pct>=0?'+':''}${pct.toFixed(1)}%)</div></div><button class="del-btn" onclick="removeHolding(${i})">×</button>`;
+    list.appendChild(row);
+  });
+  const totalPnl=total-totalCost;
+  document.getElementById('port-total').textContent=fmt(total);
+  const pel=document.getElementById('port-pnl');pel.textContent=(totalPnl>=0?'+':'')+fmt(totalPnl);pel.style.color=totalPnl>=0?'var(--green)':'var(--red)';
+  document.getElementById('port-best').textContent=bestSym!=='—'?bestSym+' +'+bestPct.toFixed(1)+'%':'—';
+  if(portChart)portChart.destroy();
+  portChart=new Chart(document.getElementById('portChart'),{
+    type:'doughnut',
+    data:{labels:chartLabels,datasets:[{data:chartData,backgroundColor:chartColors,borderWidth:2,borderColor:'#0a0a0f'}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'68%',plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${fmt(ctx.raw)} (${((ctx.raw/total)*100).toFixed(1)}%)`},backgroundColor:'#1a1a24',titleColor:'#8888aa',bodyColor:'#f0f0f8',borderColor:'rgba(255,255,255,0.08)',borderWidth:1}}}
+  });
+}
+
+function addHolding(){
+  const coinId=document.getElementById('p-coin').value;
+  const amount=parseFloat(document.getElementById('p-amount').value);
+  const buyPrice=parseFloat(document.getElementById('p-buy').value);
+  if(!coinId||isNaN(amount)||isNaN(buyPrice)||amount<=0||buyPrice<=0)return;
+  portfolio.push({coinId,amount,buyPrice});
+  document.getElementById('p-amount').value='';document.getElementById('p-buy').value='';
+  renderPortfolio();
+}
+function removeHolding(i){portfolio.splice(i,1);renderPortfolio();}
+
+function renderAlerts(){
+  const list=document.getElementById('alerts-list');list.innerHTML='';
+  if(!alerts.length){list.innerHTML='<div class="empty">no alerts set</div>';}
+  alerts.forEach((a,i)=>{
+    const coin=COINS.find(c=>c.id===a.coinId);const d=marketData[a.coinId];
+    const row=document.createElement('div');row.className='alert-row';
+    row.innerHTML=`<div class="alert-icon" style="background:${coin.color}22;color:${coin.color}">${coin.sym.slice(0,3)}</div><div class="alert-info"><div class="alert-title">${coin.sym} ${a.type} ${fmt(a.target)}</div><div class="alert-sub">now: ${d?fmt(d.current_price):'...'}</div></div><span class="badge badge-watching">watching</span><button class="del-btn" onclick="removeAlert(${i})">×</button>`;
+    list.appendChild(row);
+  });
+  const ts=document.getElementById('triggered-section');
+  const tl=document.getElementById('triggered-list');tl.innerHTML='';
+  ts.style.display=triggered.length?'block':'none';
+  triggered.forEach(a=>{
+    const div=document.createElement('div');div.className='alert-row';
+    div.innerHTML=`<div class="alert-icon" style="background:rgba(0,224,154,0.12);color:var(--green)"><i class="ti ti-check" style="font-size:14px"></i></div><div class="alert-info"><div class="alert-title">${a.sym} ${a.type} ${fmt(a.target)}</div><div class="alert-sub">hit at ${fmt(a.hitPrice)}</div></div><span class="badge badge-triggered">triggered</span>`;
+    tl.appendChild(div);
+  });
+}
+function addAlert(){
+  const coinId=document.getElementById('a-coin').value;
+  const type=document.getElementById('a-type').value;
+  const target=parseFloat(document.getElementById('a-price').value);
+  if(!coinId||isNaN(target)||target<=0)return;
+  alerts.push({coinId,type,target});document.getElementById('a-price').value='';renderAlerts();
+}
+function removeAlert(i){alerts.splice(i,1);renderAlerts();}
+
+function checkAlerts(){
+  alerts=alerts.filter(a=>{
+    const d=marketData[a.coinId];if(!d)return true;
+    const hit=(a.type==='above'&&d.current_price>=a.target)||(a.type==='below'&&d.current_price<=a.target);
+    if(hit){const coin=COINS.find(c=>c.id===a.coinId);triggered.unshift({sym:coin.sym,type:a.type,target:a.target,hitPrice:d.current_price});if(triggered.length>5)triggered.pop();}
+    return!hit;
+  });
+}
+
+async function fetchMarket(){
+  const ids=COINS.map(c=>c.id).join(',');
+  try{
+    const res=await fetch(`https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${ids}&order=market_cap_desc&sparkline=false`);
+    const data=await res.json();
+    data.forEach(d=>{marketData[d.id]=d;});
+    renderStats();renderAllCoins();checkAlerts();
+    document.getElementById('last-updated').textContent='live · '+new Date().toLocaleTimeString();
+  }catch(e){document.getElementById('last-updated').textContent='api error — retrying...';}
+}
+
+async function fetchHistory(){
+  const key=selCoin.id+'_'+selRange.label;
+  if(pricesData[key]){renderPriceChart();return;}
+  try{
+    const res=await fetch(`https://api.coingecko.com/api/v3/coins/${selCoin.id}/market_chart?vs_currency=usd&days=${selRange.days}`);
+    const data=await res.json();
+    pricesData[key]=data.prices;renderPriceChart();
+  }catch(e){}
+}
+
+buildCoinSelects();buildTabs();
+fetchMarket().then(()=>fetchHistory());
+setInterval(()=>{pricesData={};fetchMarket().then(()=>fetchHistory());},60000);
+</script>
+</body>
+</html>
